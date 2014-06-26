@@ -57,6 +57,7 @@
       this.x = 40;
       this.y = (this.num + 1) * 100;
       this.selected = false;
+      this.is_playing = false;
     }
 
     Instrument.prototype.draw = function(processing) {
@@ -66,8 +67,16 @@
     };
 
     Instrument.prototype.play = function() {
-      console.log("BING");
-      return createjs.Sound.play(this.num);
+      if (!this.is_playing) {
+        createjs.Sound.play(this.num);
+        console.log("PLAY " + this.num);
+        this.is_playing = true;
+        return setTimeout((function(_this) {
+          return function() {
+            return _this.is_playing = false;
+          };
+        })(this), 50);
+      }
     };
 
     Instrument.prototype.tap = function(x, y) {
@@ -94,7 +103,7 @@
       this.selected_instrument = null;
       this.instruments = [];
       for (i = _i = 0, _ref = config.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
-        this.instruments.push(new Instrument(config[i].color, i, this.sound_player));
+        this.instruments.push(new Instrument(config[i].color, i + 1, this.sound_player));
       }
     }
 
@@ -149,7 +158,11 @@
     Note.prototype.draw = function(processing, metronome, selected) {
       var r;
       processing.noFill();
-      processing.stroke(0);
+      if (this.note === 1) {
+        processing.stroke(this.color);
+      } else {
+        processing.stroke(200);
+      }
       if (this.note === 1) {
         processing.fill(this.color);
       }
@@ -167,7 +180,7 @@
       if (instrument && Math.sqrt(Math.pow(this.x - x, 2) + Math.pow(this.y - y, 2)) < this.radius / 2) {
         this.note = this.note === 1 ? 0 : 1;
         this.color = instrument.color;
-        return this.instrument = instrument;
+        return this.instrument = this.note === 1 ? instrument : null;
       }
     };
 

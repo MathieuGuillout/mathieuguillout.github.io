@@ -34,6 +34,7 @@ class Instrument
     @x = 40
     @y = (@num + 1) * 100
     @selected = false
+    @is_playing = false
 
   draw: (processing) ->
     processing.stroke(if @selected then 0 else @color)
@@ -41,7 +42,14 @@ class Instrument
     processing.ellipse @x, @y, @radius, @radius 
 
   play: () ->
-    createjs.Sound.play(@num)
+    if not @is_playing
+      createjs.Sound.play(@num)
+      console.log "PLAY #{@num}"
+      @is_playing = true
+      setTimeout () =>
+        @is_playing = false
+      , 50
+    
 
   tap: (x, y) ->
     if Math.sqrt(Math.pow(@x - x, 2) + Math.pow(@y - y, 2)) < @radius / 2
@@ -58,7 +66,7 @@ class InstrumentPicker
     @selected_instrument = null
     @instruments = []
     for i in [0...config.length]
-      @instruments.push(new Instrument(config[i].color, i, @sound_player))
+      @instruments.push(new Instrument(config[i].color, i + 1, @sound_player))
 
   draw: (processing) ->
     instrument.draw(processing) for instrument in @instruments
@@ -80,7 +88,10 @@ class Note
 
   draw: (processing, metronome, selected) ->
     processing.noFill()
-    processing.stroke(0)
+    if @note is 1
+      processing.stroke(@color)
+    else
+      processing.stroke(200)
     processing.fill(@color) if @note is 1
     processing.fill(configuration.selected_color) if selected
     r = (if selected then 1.1 else 1) * @radius
@@ -93,7 +104,7 @@ class Note
     if instrument and Math.sqrt(Math.pow(@x - x, 2) + Math.pow(@y - y, 2)) < @radius / 2
       @note = if @note is 1 then 0 else 1
       @color = instrument.color
-      @instrument = instrument
+      @instrument = if @note is 1 then instrument else null
 
 class Sequence
   constructor: (@interval, @radius) ->
