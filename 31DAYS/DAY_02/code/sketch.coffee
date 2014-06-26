@@ -41,7 +41,6 @@ class Instrument
     processing.ellipse @x, @y, @radius, @radius 
 
   play: () ->
-    console.log "BING"
     createjs.Sound.play(@num)
 
   tap: (x, y) ->
