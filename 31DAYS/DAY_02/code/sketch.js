@@ -69,7 +69,6 @@
     Instrument.prototype.play = function() {
       if (!this.is_playing) {
         createjs.Sound.play(this.num);
-        console.log("PLAY " + this.num);
         this.is_playing = true;
         return setTimeout((function(_this) {
           return function() {

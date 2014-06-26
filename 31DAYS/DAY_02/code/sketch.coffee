@@ -44,7 +44,6 @@ class Instrument
   play: () ->
     if not @is_playing
       createjs.Sound.play(@num)
-      console.log "PLAY #{@num}"
       @is_playing = true
       setTimeout () =>
         @is_playing = false
