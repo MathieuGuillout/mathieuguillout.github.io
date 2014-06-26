@@ -4,6 +4,7 @@ configuration =
   radius: 30
   size: 800
   tempo: 70
+  selected_color: 0x22000000
   instruments: [
     { color: 0xDDF57373 }
     { color: 0xDDF5AE73 }
@@ -11,8 +12,24 @@ configuration =
     { color: 0xDD5CC45C }
   ]
 
+class SoundPlayer
+  constructor: (@ready_callback) ->
+    createjs.Sound.alternateExtensions = ["mp3"]
+    createjs.Sound.addEventListener "fileload", (createjs.proxy @sound_loaded, @)
+    for i in [1..configuration.instruments.length]
+      createjs.Sound.registerSound "data/#{i}.mp3", i 
+
+    @ready = false
+    @sounds = 0
+
+  sound_loaded: () ->
+    @sounds += 1
+    if @sounds is configuration.instruments.length
+      @ready_callback() if @ready_callback?
+      @ready = true
+
 class Instrument 
-  constructor: (@color, @num) ->
+  constructor: (@color, @num, @sound_player) ->
     @radius = 80
     @x = 40
     @y = (@num + 1) * 100
@@ -22,6 +39,10 @@ class Instrument
     processing.stroke(if @selected then 0 else @color)
     processing.fill(@color)
     processing.ellipse @x, @y, @radius, @radius 
+
+  play: () ->
+    console.log "BING"
+    createjs.Sound.play(@num)
 
   tap: (x, y) ->
     if Math.sqrt(Math.pow(@x - x, 2) + Math.pow(@y - y, 2)) < @radius / 2
@@ -34,11 +55,11 @@ class Instrument
     @selected = false
 
 class InstrumentPicker
-  constructor: (config) ->
+  constructor: (config, @sound_player) ->
     @selected_instrument = null
     @instruments = []
     for i in [0...config.length]
-      @instruments.push(new Instrument(config[i].color, i))
+      @instruments.push(new Instrument(config[i].color, i, @sound_player))
 
   draw: (processing) ->
     instrument.draw(processing) for instrument in @instruments
@@ -53,21 +74,27 @@ class InstrumentPicker
 
 
 class Note
-  constructor: (@note, @x, @y) ->
+  constructor: (@note, @x, @y, @sound_player) ->
     @radius = configuration.radius
     @color = 0
+
 
   draw: (processing, metronome, selected) ->
     processing.noFill()
     processing.stroke(0)
     processing.fill(@color) if @note is 1
-    processing.fill(100) if selected
-    processing.ellipse @x, @y, @radius, @radius 
+    processing.fill(configuration.selected_color) if selected
+    r = (if selected then 1.1 else 1) * @radius
+    processing.ellipse @x, @y, r, r
+    if selected and @instrument
+      @instrument.play()
+
 
   tap: (x, y, instrument) ->
     if instrument and Math.sqrt(Math.pow(@x - x, 2) + Math.pow(@y - y, 2)) < @radius / 2
       @note = if @note is 1 then 0 else 1
       @color = instrument.color
+      @instrument = instrument
 
 class Sequence
   constructor: (@interval, @radius) ->
@@ -76,7 +103,7 @@ class Sequence
       angle = i * (2 * Math.PI / @interval)
       x = 50 + (configuration.size / 2) + Math.cos(angle) * (@radius + 1) * configuration.interval_radius
       y = (configuration.size / 2) + Math.sin(angle) * (@radius + 1) * configuration.interval_radius
-      @notes.push new Note(0, x, y)
+      @notes.push new Note(0, x, y, @sound_player)
 
 
   draw: (processing, metronome) ->
@@ -127,11 +154,13 @@ class Metronome
 sketch = (processing) ->
   
   processing.setup = () =>
+    @sound_player = new SoundPlayer()
     @metronome = new Metronome(configuration.tempo)
     @sequencer = new Sequencer(configuration.sequencer_intervals)
-    @instrument_picker = new InstrumentPicker(configuration.instruments)
-
-    @metronome.start()
+    @instrument_picker = new InstrumentPicker(configuration.instruments, @sound_player)
+    metro = @metronome
+    @sound_player.ready_callback  = () ->
+      metro.start()
 
   processing.draw = () =>
     processing.background(255)
